@@ -16,14 +16,59 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+
 export default function DashboardPage() {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const [userName, setUserName] = useState('User');
+  const [userCredits, setUserCredits] = useState(5);
+  const [pollsList, setPollsList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // Fetch Profile
+          const { data: profile } = await supabase
+            .from('users')
+            .select('full_name, credits')
+            .eq('id', user.id)
+            .single();
+
+          if (profile) {
+            setUserName(profile.full_name || 'User');
+            setUserCredits(profile.credits ?? 5);
+          }
+
+          // Fetch Polls
+          const res = await fetch('/api/polls');
+          if (res.ok) {
+            const data = await res.json();
+            setPollsList(data.polls || []);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
+
+  const totalPollsCount = pollsList.length;
+  const activePollsCount = pollsList.filter(p => p.status === 'voting_open').length;
 
   const stats = [
-    { label: 'Total Polls', value: '24', icon: Vote, trend: '+12%', isPositive: true },
-    { label: 'Active Polls', value: '3', icon: Clock, trend: 'Stable', isPositive: null },
-    { label: 'Total Votes', value: '1,492', icon: Users, trend: '+8.4%', isPositive: true },
-    { label: 'Credits Remaining', value: '1,250', icon: CheckCircle2, trend: '-50', isPositive: false },
+    { label: 'Total Polls', value: String(totalPollsCount || 0), icon: Vote, trend: '+1', isPositive: true },
+    { label: 'Active Polls', value: String(activePollsCount || 0), icon: Clock, trend: 'Live', isPositive: true },
+    { label: 'Total Votes', value: '0', icon: Users, trend: '0', isPositive: null },
+    { label: 'Credits Remaining', value: String(userCredits), icon: CheckCircle2, trend: 'Available', isPositive: true },
   ];
 
   const recentPolls = [
@@ -61,7 +106,7 @@ export default function DashboardPage() {
       {/* Welcome Section */}
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome back, John!</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Welcome back, {userName}!</h1>
           <p className="text-slate-400 flex items-center gap-2">
             <Calendar className="w-4 h-4" />
             {today}
