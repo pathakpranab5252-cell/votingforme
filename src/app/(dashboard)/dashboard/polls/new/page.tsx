@@ -146,9 +146,31 @@ export default function NewPollWizard() {
     setErrorMsg('');
 
     try {
+      let activePollId = pollId;
+
+      // If poll wasn't saved to backend yet, create it now
+      if (!activePollId) {
+        const validCandidates = candidates.filter((c) => c.name.trim());
+        const createRes = await fetch('/api/polls', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title,
+            description,
+            candidates: validCandidates,
+          }),
+        });
+
+        if (createRes.ok) {
+          const createData = await createRes.json();
+          activePollId = createData.poll?.id;
+          setPollId(activePollId);
+        }
+      }
+
       const validVotersList = voters.filter((v) => v.valid);
-      if (pollId) {
-        await fetch(`/api/polls/${pollId}/launch`, {
+      if (activePollId) {
+        await fetch(`/api/polls/${activePollId}/launch`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ voters: validVotersList }),

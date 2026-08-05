@@ -31,8 +31,54 @@ const MOCK_RESULTS = {
   ]
 };
 
-export default function PollResults() {
-  const winner = MOCK_RESULTS.candidates.find(c => c.isWinner);
+import { useState, useEffect, use } from 'react';
+
+export default function PollResults({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [results, setResults] = useState<any>(MOCK_RESULTS);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadResults() {
+      try {
+        const res = await fetch(`/api/polls/${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.poll && data.candidates) {
+            const totalCast = data.stats?.voted || 0;
+            const sortedCandidates = [...data.candidates].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+            const maxVotes = sortedCandidates[0]?.votes || 0;
+
+            const mappedCandidates = sortedCandidates.map((c: any) => ({
+              id: c.id,
+              name: c.name,
+              votes: c.votes || 0,
+              percentage: totalCast > 0 ? Math.round(((c.votes || 0) / totalCast) * 100) : 0,
+              isWinner: maxVotes > 0 && c.votes === maxVotes,
+            }));
+
+            setResults({
+              id: data.poll.id,
+              title: data.poll.title,
+              status: data.poll.status,
+              totalVoters: data.stats?.total_voters || 0,
+              votesCast: totalCast,
+              participationRate: data.stats?.participation_rate || 0,
+              didNotVote: (data.stats?.total_voters || 0) - totalCast,
+              candidates: mappedCandidates.length > 0 ? mappedCandidates : MOCK_RESULTS.candidates,
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Using mock results fallback:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadResults();
+  }, [id]);
+
+  const winner = results.candidates.find((c: any) => c.isWinner);
 
   return (
     <div className="min-h-screen bg-[#0F0D1A] text-slate-200 font-sans p-6 md:p-8">
@@ -40,14 +86,14 @@ export default function PollResults() {
         
         {/* Header Section */}
         <div className="space-y-4">
-          <Link href={`/dashboard/polls/${MOCK_RESULTS.id}`} className="inline-flex items-center text-slate-400 hover:text-white transition-colors text-sm font-medium">
+          <Link href={`/dashboard/polls/${results.id}`} className="inline-flex items-center text-slate-400 hover:text-white transition-colors text-sm font-medium">
             <ChevronLeft className="w-4 h-4 mr-1" />
             Back to Dashboard
           </Link>
           
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">{MOCK_RESULTS.title}</h1>
+              <h1 className="text-3xl font-bold text-white mb-2">{results.title}</h1>
               <div className="flex items-center gap-3">
                 <span className="text-xl text-slate-400 font-light">Results</span>
                 <span className="h-4 w-px bg-slate-700"></span>
@@ -111,7 +157,7 @@ export default function PollResults() {
             <h3 className="text-xl font-semibold text-white">All Candidates</h3>
             
             <div className="space-y-6 bg-white/[0.02] border border-white/5 backdrop-blur-md rounded-2xl p-6">
-              {MOCK_RESULTS.candidates.map((candidate, i) => (
+              {results.candidates.map((candidate: any, i: number) => (
                 <div key={candidate.id} className="space-y-2">
                   <div className="flex justify-between items-end text-sm">
                     <span className={`font-medium ${candidate.isWinner ? 'text-white text-base' : 'text-slate-300'}`}>
@@ -157,7 +203,7 @@ export default function PollResults() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {MOCK_RESULTS.candidates.map((candidate) => (
+                  {results.candidates.map((candidate: any) => (
                     <tr key={candidate.id} className={candidate.isWinner ? 'bg-indigo-500/5' : 'hover:bg-white/[0.02] transition-colors'}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`text-sm ${candidate.isWinner ? 'font-bold text-indigo-300' : 'text-slate-200'}`}>
@@ -188,7 +234,7 @@ export default function PollResults() {
                 </div>
                 <div>
                   <p className="text-slate-400 text-sm mb-1">Eligible Voters</p>
-                  <p className="text-2xl font-bold text-white">{MOCK_RESULTS.totalVoters}</p>
+                  <p className="text-2xl font-bold text-white">{results.totalVoters}</p>
                 </div>
               </div>
 
@@ -198,7 +244,7 @@ export default function PollResults() {
                 </div>
                 <div>
                   <p className="text-slate-400 text-sm mb-1">Total Votes Cast</p>
-                  <p className="text-2xl font-bold text-white">{MOCK_RESULTS.votesCast}</p>
+                  <p className="text-2xl font-bold text-white">{results.votesCast}</p>
                 </div>
               </div>
               
@@ -208,7 +254,7 @@ export default function PollResults() {
                 </div>
                 <div>
                   <p className="text-slate-400 text-sm mb-1">Participation Rate</p>
-                  <p className="text-2xl font-bold text-white">{MOCK_RESULTS.participationRate}%</p>
+                  <p className="text-2xl font-bold text-white">{results.participationRate}%</p>
                 </div>
               </div>
 

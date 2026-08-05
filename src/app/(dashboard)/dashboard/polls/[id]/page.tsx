@@ -47,11 +47,58 @@ const VOTERS_DATA = [
   { id: '7', name: 'George Miller', email: 'gmiller@example.com', status: 'not_voted', votedAt: null },
 ];
 
-export default function PollDashboard() {
+import { use, useEffect } from 'react';
+
+export default function PollDashboard({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const [poll, setPoll] = useState<any>(MOCK_POLL);
+  const [voters, setVoters] = useState<any[]>(VOTERS_DATA);
+  const [stats, setStats] = useState<any>({
+    totalVoters: MOCK_POLL.totalVoters,
+    votesCast: MOCK_POLL.votesCast,
+    participationRate: MOCK_POLL.participationRate,
+  });
   const [activeTab, setActiveTab] = useState<'voted' | 'not_voted'>('voted');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const filteredVoters = VOTERS_DATA.filter(voter => 
+  useEffect(() => {
+    async function loadPollDetail() {
+      try {
+        const res = await fetch(`/api/polls/${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.poll) {
+            setPoll(data.poll);
+          }
+          if (data.stats) {
+            setStats({
+              totalVoters: data.stats.total_voters,
+              votesCast: data.stats.voted,
+              participationRate: data.stats.participation_rate,
+            });
+          }
+          if (data.voter_list && data.voter_list.length > 0) {
+            const mappedVoters = data.voter_list.map((v: any) => ({
+              id: v.id,
+              name: v.name || 'Anonymous Voter',
+              email: v.email,
+              status: v.has_voted ? 'voted' : 'not_voted',
+              votedAt: v.has_voted ? 'Recorded' : null,
+            }));
+            setVoters(mappedVoters);
+          }
+        }
+      } catch (err) {
+        console.warn('Using mock poll detail fallback:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPollDetail();
+  }, [id]);
+
+  const filteredVoters = voters.filter(voter => 
     voter.status === activeTab && 
     (voter.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
      voter.email.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -70,13 +117,13 @@ export default function PollDashboard() {
           
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-white mb-2">{MOCK_POLL.title}</h1>
+              <h1 className="text-3xl font-bold text-white mb-2">{poll.title}</h1>
               <div className="flex items-center gap-2">
                 <span className="relative flex h-3 w-3">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                 </span>
-                <span className="text-emerald-400 font-medium text-sm">Voting Open</span>
+                <span className="text-emerald-400 font-medium text-sm capitalize">{poll.status ? poll.status.replace('_', ' ') : 'Voting Open'}</span>
               </div>
             </div>
             
@@ -90,7 +137,7 @@ export default function PollDashboard() {
                 Close Voting
               </button>
               <Link 
-                href={`/dashboard/polls/${MOCK_POLL.id}/results`}
+                href={`/dashboard/polls/${poll.id}/results`}
                 className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-lg text-sm font-medium transition-colors shadow-[0_0_15px_rgba(79,70,229,0.3)]"
               >
                 <BarChart3 className="w-4 h-4" />
@@ -103,10 +150,10 @@ export default function PollDashboard() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Total Voters', value: MOCK_POLL.totalVoters, icon: Users, color: 'text-blue-400' },
-            { label: 'Votes Cast', value: MOCK_POLL.votesCast, icon: CheckCircle, color: 'text-emerald-400' },
-            { label: 'Participation Rate', value: `${MOCK_POLL.participationRate}%`, icon: TrendingUp, color: 'text-violet-400' },
-            { label: 'Time Remaining', value: MOCK_POLL.timeRemaining, icon: Clock, color: 'text-amber-400' },
+            { label: 'Total Voters', value: stats.totalVoters, icon: Users, color: 'text-blue-400' },
+            { label: 'Votes Cast', value: stats.votesCast, icon: CheckCircle, color: 'text-emerald-400' },
+            { label: 'Participation Rate', value: `${stats.participationRate}%`, icon: TrendingUp, color: 'text-violet-400' },
+            { label: 'Time Remaining', value: 'Active', icon: Clock, color: 'text-amber-400' },
           ].map((stat, i) => (
             <motion.div 
               key={i}

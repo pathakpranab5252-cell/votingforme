@@ -4,12 +4,40 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Coins, Zap, Shield, HelpCircle, CreditCard, Plus } from 'lucide-react';
 
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+
 export default function CreditsPage() {
+  const [credits, setCredits] = useState(5);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadCredits() {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('users')
+            .select('credits')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (profile) {
+            setCredits(profile.credits ?? 5);
+          }
+        }
+      } catch (err) {
+        console.warn('Error loading credits:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadCredits();
+  }, []);
+
   const transactions = [
-    { id: 1, date: 'Oct 12, 2025', reason: 'Admin credit', amount: '+100', isAdd: true, balance: '1,250' },
-    { id: 2, date: 'Oct 10, 2025', reason: 'Board Election 2025', amount: '-50', isAdd: false, balance: '1,150' },
-    { id: 3, date: 'Oct 01, 2025', reason: 'Employee Satisfaction', amount: '-10', isAdd: false, balance: '1,200' },
-    { id: 4, date: 'Sep 25, 2025', reason: 'Signup bonus', amount: '+50', isAdd: true, balance: '1,210' },
+    { id: 1, date: 'Today', reason: 'Free Signup Bonus', amount: '+5', isAdd: true, balance: String(credits) },
   ];
 
   const containerVariants = {
@@ -52,7 +80,7 @@ export default function CreditsPage() {
                 animate={{ scale: 1 }}
                 className="text-5xl font-bold text-white"
               >
-                1,250
+                {credits}
               </motion.span>
               <span className="text-indigo-400 font-medium">credits</span>
             </div>

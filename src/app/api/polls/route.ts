@@ -70,7 +70,7 @@ export async function GET(request: Request) {
 
     const { data: polls, error } = await supabase
       .from('polls')
-      .select('*, candidates(count), voters(count)')
+      .select('*, candidates(id), voters(id)')
       .eq('creator_id', user.id)
       .order('created_at', { ascending: false });
 
