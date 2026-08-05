@@ -1,0 +1,80 @@
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+const FROM_EMAIL = 'VotingForMe <noreply@votingforme.com>'; // Requires domain verification in Resend
+
+export interface InvitationEmailProps {
+  voterName?: string;
+  pollTitle: string;
+  pollDescription?: string;
+  votingLink: string;
+  closingTime?: string;
+}
+
+export async function sendVotingInvitation(to: string, props: InvitationEmailProps) {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to,
+      subject: `Invitation to Vote: ${props.pollTitle}`,
+      html: `
+        <div style="font-family: sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px;">
+          <h2 style="color: #4F46E5;">VotingForMe</h2>
+          <h3>You've been invited to vote!</h3>
+          <p>Hi ${props.voterName || 'there'},</p>
+          <p>You are eligible to vote in: <strong>${props.pollTitle}</strong></p>
+          ${props.pollDescription ? `<p style="color: #666;">${props.pollDescription}</p>` : ''}
+          
+          <div style="margin: 30px 0; text-align: center;">
+            <a href="${props.votingLink}" style="background-color: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+              Cast Your Vote
+            </a>
+          </div>
+          
+          ${props.closingTime ? `<p style="font-size: 14px; color: #666;">Voting closes on ${props.closingTime}.</p>` : ''}
+          <p style="font-size: 14px; color: #666; margin-top: 30px;">
+            This link is unique to you. Do not share it with anyone.<br/>
+            Secure online voting powered by VotingForMe.
+          </p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error('Resend API Error:', error);
+      return { success: false, error };
+    }
+    return { success: true, data };
+  } catch (error) {
+    console.error('Email sending failed:', error);
+    return { success: false, error };
+  }
+}
+
+export async function sendVoteReceipt(to: string, pollTitle: string, candidateName: string) {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to,
+      subject: `Vote Receipt: ${pollTitle}`,
+      html: `
+        <div style="font-family: sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px;">
+          <h2 style="color: #4F46E5;">VotingForMe</h2>
+          <h3>Vote Confirmed! 🎉</h3>
+          <p>Your vote for <strong>${pollTitle}</strong> has been securely recorded.</p>
+          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #64748b; font-size: 14px;">You voted for:</p>
+            <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold;">${candidateName}</p>
+          </div>
+          <p style="font-size: 14px; color: #666; margin-top: 30px;">
+            Thank you for participating.<br/>
+            Secure online voting powered by VotingForMe.
+          </p>
+        </div>
+      `,
+    });
+    return { success: !error, error, data };
+  } catch (error) {
+    return { success: false, error };
+  }
+}
