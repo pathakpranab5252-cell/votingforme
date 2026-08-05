@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
@@ -96,8 +96,38 @@ const tabs: { label: string; value: string }[] = [
 export default function PollsPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
+  const [polls, setPolls] = useState<Poll[]>(mockPolls);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filtered = mockPolls.filter((p) => {
+  useEffect(() => {
+    async function fetchPolls() {
+      try {
+        const res = await fetch('/api/polls');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.polls && data.polls.length > 0) {
+            const mappedPolls = data.polls.map((p: any) => ({
+              id: p.id,
+              title: p.title,
+              status: p.status,
+              totalVoters: p.credits_consumed || p.voters?.[0]?.count || 0,
+              votedCount: 0,
+              createdAt: new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              endTime: p.end_time ? new Date(p.end_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : undefined,
+            }));
+            setPolls(mappedPolls);
+          }
+        }
+      } catch (err) {
+        console.warn('Using mock polls fallback:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchPolls();
+  }, []);
+
+  const filtered = polls.filter((p) => {
     const matchTab = activeTab === 'all' || p.status === activeTab;
     const matchSearch = p.title.toLowerCase().includes(search.toLowerCase());
     return matchTab && matchSearch;

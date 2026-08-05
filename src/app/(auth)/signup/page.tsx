@@ -57,10 +57,12 @@ export default function SignupPage() {
       const supabase = createClient();
 
       // Sign up with Supabase Auth
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: `${origin}/auth/callback`,
           data: {
             full_name: fullName,
             organization_name: orgName,

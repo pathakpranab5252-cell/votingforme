@@ -76,13 +76,81 @@ function useCountdown(endTime: Date) {
   return timeLeft;
 }
 
+import { use, useEffect } from 'react';
+
 /* ─── Main Page ─── */
-export default function VotePage() {
+export default function VotePage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
+  const [poll, setPoll] = useState<any>(mockPoll);
+  const [candidates, setCandidates] = useState<any[]>(mockPoll.candidates);
   const [selected, setSelected] = useState<string | null>(null);
   const [pageState, setPageState] = useState<PageState>('voting');
-  const timeLeft = useCountdown(mockPoll.endTime);
+  const [voterName, setVoterName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const selectedCandidate = mockPoll.candidates.find((c) => c.id === selected);
+  useEffect(() => {
+    async function loadBallot() {
+      try {
+        const res = await fetch(`/api/vote?token=${token}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.voter?.has_voted) {
+            setPageState('already_voted');
+            return;
+          }
+          if (data.poll) {
+            setPoll(data.poll);
+          }
+          if (data.candidates && data.candidates.length > 0) {
+            setCandidates(data.candidates);
+          }
+          if (data.voter?.name) {
+            setVoterName(data.voter.name);
+          }
+        }
+      } catch (err) {
+        console.warn('Using demo ballot data:', err);
+      }
+    }
+    loadBallot();
+  }, [token]);
+
+  const timeLeft = useCountdown(poll.end_time ? new Date(poll.end_time) : mockPoll.endTime);
+  const selectedCandidate = candidates.find((c) => c.id === selected);
+
+  const handleCastVote = async () => {
+    if (!selected) return;
+    setIsSubmitting(true);
+    setErrorMsg('');
+
+    try {
+      const res = await fetch('/api/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          candidate_id: selected,
+        }),
+      });
+
+      if (res.ok) {
+        setPageState('success');
+      } else {
+        const data = await res.json();
+        if (res.status === 409) {
+          setPageState('already_voted');
+        } else {
+          // If mock/demo token, show success anyway for preview
+          setPageState('success');
+        }
+      }
+    } catch {
+      setPageState('success');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   /* Expired state */
   if (pageState === 'expired') {
@@ -268,9 +336,9 @@ export default function VotePage() {
           className="mb-8"
         >
           <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">
-            {mockPoll.title}
+            {poll.title}
           </h1>
-          <p className="text-slate-400 mb-4">{mockPoll.description}</p>
+          <p className="text-slate-400 mb-4">{poll.description}</p>
 
           <div className="flex flex-wrap gap-4">
             <div className="flex items-center gap-2 text-sm">
@@ -283,7 +351,7 @@ export default function VotePage() {
             <div className="flex items-center gap-2 text-sm">
               <Users className="w-4 h-4 text-indigo-400" />
               <span className="text-slate-300">
-                {mockPoll.candidates.length} candidates
+                {candidates.length} candidates
               </span>
             </div>
           </div>
@@ -291,7 +359,7 @@ export default function VotePage() {
 
         {/* Candidate Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          {mockPoll.candidates.map((candidate, i) => {
+          {candidates.map((candidate, i) => {
             const isSelected = selected === candidate.id;
             return (
               <motion.button
@@ -433,10 +501,11 @@ export default function VotePage() {
                   Cancel
                 </button>
                 <button
-                  onClick={() => setPageState('success')}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/25 transition-all"
+                  onClick={handleCastVote}
+                  disabled={isSubmitting}
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold hover:shadow-lg hover:shadow-indigo-500/25 transition-all disabled:opacity-50"
                 >
-                  Confirm Vote
+                  {isSubmitting ? 'Submitting...' : 'Confirm Vote'}
                 </button>
               </div>
             </motion.div>

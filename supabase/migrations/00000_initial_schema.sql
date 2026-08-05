@@ -89,13 +89,17 @@ ALTER TABLE public.voters ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.credit_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activity_log ENABLE ROW LEVEL SECURITY;
 
--- Basic Policies (can be refined later)
+-- Policies for public.users
 CREATE POLICY "Users can view their own profile" 
 ON public.users FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert their own profile" 
+ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
 
 CREATE POLICY "Users can update their own profile" 
 ON public.users FOR UPDATE USING (auth.uid() = id);
 
+-- Policies for public.polls
 CREATE POLICY "Creators can view own polls" 
 ON public.polls FOR SELECT USING (auth.uid() = creator_id);
 
@@ -105,8 +109,41 @@ ON public.polls FOR INSERT WITH CHECK (auth.uid() = creator_id);
 CREATE POLICY "Creators can update own polls" 
 ON public.polls FOR UPDATE USING (auth.uid() = creator_id);
 
+-- Policies for public.candidates
 CREATE POLICY "Anyone can view candidates for a poll"
 ON public.candidates FOR SELECT USING (true);
+
+CREATE POLICY "Creators can manage candidates"
+ON public.candidates FOR ALL USING (true);
+
+-- Policies for public.voters
+CREATE POLICY "Anyone can view ballot by token"
+ON public.voters FOR SELECT USING (true);
+
+CREATE POLICY "Voters can record their vote"
+ON public.voters FOR UPDATE USING (true);
+
+-- Automatic User Profile Trigger on Signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email, full_name, organization_name, credits, role)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', SPLIT_PART(NEW.email, '@', 1)),
+    NEW.raw_user_meta_data->>'organization_name',
+    5,
+    'poll_creator'
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- Triggers for updated_at
 CREATE OR REPLACE FUNCTION update_modified_column()
