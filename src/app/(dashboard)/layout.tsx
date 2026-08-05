@@ -17,17 +17,27 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+
 const NAV_ITEMS = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'My Polls', href: '/dashboard/polls', icon: Vote },
-  { name: 'Create Poll', href: '/dashboard/create', icon: PlusCircle },
+  { name: 'Create Poll', href: '/dashboard/polls/new', icon: PlusCircle },
   { name: 'Credits', href: '/dashboard/credits', icon: Coins },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
@@ -108,7 +118,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="text-sm font-medium text-slate-200 truncate">John Doe</p>
               <p className="text-xs text-slate-500 truncate">john@example.com</p>
             </div>
-            <button className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors">
+            <button 
+              onClick={handleLogout}
+              title="Log out"
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+            >
               <LogOut className="w-4 h-4" />
             </button>
           </div>

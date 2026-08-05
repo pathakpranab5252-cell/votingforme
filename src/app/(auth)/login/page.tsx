@@ -2,23 +2,47 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '/dashboard';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    console.log('Login submitting:', { email, password });
-    
-    // Simulate API call
-    setTimeout(() => {
+    setError('');
+
+    try {
+      const supabase = createClient();
+
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        setError(signInError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // Successful login — redirect
+      router.push(redirectTo);
+      router.refresh();
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -27,6 +51,12 @@ export default function LoginPage() {
         <h1 className="text-2xl font-bold text-white mb-2">Welcome back</h1>
         <p className="text-slate-400 text-sm">Please sign in to your account</p>
       </div>
+
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
@@ -107,7 +137,7 @@ export default function LoginPage() {
       </button>
 
       <p className="text-center text-sm text-slate-400 mt-2">
-        Don't have an account?{' '}
+        Don&apos;t have an account?{' '}
         <Link href="/signup" className="text-white hover:text-indigo-400 font-medium transition-colors">
           Sign up
         </Link>

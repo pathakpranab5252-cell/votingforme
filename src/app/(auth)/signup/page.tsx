@@ -2,9 +2,12 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Mail, Lock, User, Building2, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 export default function SignupPage() {
+  const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [orgName, setOrgName] = useState('');
   const [email, setEmail] = useState('');
@@ -12,6 +15,8 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   // Password strength calculation
   const getPasswordStrength = () => {
@@ -45,12 +50,61 @@ export default function SignupPage() {
     if (!agreeTerms) return;
     
     setIsLoading(true);
-    console.log('Signup submitting:', { fullName, orgName, email, password });
-    
-    // Simulate API call
-    setTimeout(() => {
+    setError('');
+    setSuccess('');
+
+    try {
+      const supabase = createClient();
+
+      // Sign up with Supabase Auth
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            organization_name: orgName,
+          },
+        },
+      });
+
+      if (signUpError) {
+        setError(signUpError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // If user was created and auto-confirmed, create profile
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('users')
+          .upsert({
+            id: data.user.id,
+            email: email,
+            full_name: fullName,
+            organization_name: orgName || null,
+            credits: 5,
+            role: 'poll_creator',
+          }, { onConflict: 'id' });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          // Don't block — auth worked, profile can be created later
+        }
+      }
+
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        setSuccess('Account created! Check your email to confirm your account.');
+        setIsLoading(false);
+      } else {
+        // Auto-confirmed — redirect to dashboard
+        router.push('/dashboard');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -65,6 +119,18 @@ export default function SignupPage() {
           Start with 5 free credits
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="bg-green-500/10 border border-green-500/20 text-green-400 text-sm px-4 py-3 rounded-lg">
+          {success}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-2">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -130,6 +196,7 @@ export default function SignupPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              minLength={6}
               className="w-full bg-white/5 border border-white/10 text-white rounded-lg pl-9 pr-9 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all placeholder:text-slate-500"
               placeholder="••••••••"
             />
