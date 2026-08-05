@@ -34,11 +34,29 @@ export default function DashboardPage() {
         
         if (user) {
           // Fetch Profile
-          const { data: profile } = await supabase
+          let { data: profile } = await supabase
             .from('users')
             .select('full_name, credits')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
+
+          // Auto-create missing profile for existing accounts
+          if (!profile) {
+            const defaultName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+            const { data: newProfile } = await supabase
+              .from('users')
+              .upsert({
+                id: user.id,
+                email: user.email || '',
+                full_name: defaultName,
+                credits: 5,
+                role: 'poll_creator',
+              })
+              .select('full_name, credits')
+              .maybeSingle();
+
+            profile = newProfile;
+          }
 
           if (profile) {
             setUserName(profile.full_name || 'User');
@@ -113,11 +131,11 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 font-medium flex items-center gap-2 transition-all">
+          <Link href="/dashboard/polls/new" className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 font-medium flex items-center gap-2 transition-all">
             <Upload className="w-4 h-4" />
             Upload Voters
-          </button>
-          <Link href="/dashboard/create" className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium flex items-center gap-2 transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)]">
+          </Link>
+          <Link href="/dashboard/polls/new" className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium flex items-center gap-2 transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)]">
             <Plus className="w-4 h-4" />
             Create New Poll
           </Link>
