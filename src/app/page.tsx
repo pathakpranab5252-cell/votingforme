@@ -51,7 +51,7 @@ export default function LandingPage() {
       {/* Navigation Header */}
       <header 
         className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-          isScrolled ? 'bg-[#0F0D1A]/80 backdrop-blur-xl border-b border-white/10 py-3' : 'bg-transparent py-5'
+          isScrolled ? 'bg-[#0F0D1A]/80 backdrop-blur-xl border-b border-white/10 py-2 md:py-3' : 'bg-transparent py-3 md:py-5'
         }`}
       >
         <div className="container mx-auto px-6 md:px-12 flex items-center justify-between">
@@ -105,9 +105,9 @@ export default function LandingPage() {
         )}
       </header>
 
-      <main className="relative z-10 pt-32 pb-20">
+      <main className="relative z-10 pt-20 md:pt-32 pb-10 md:pb-20">
         {/* Hero Section */}
-        <section className="container mx-auto px-6 md:px-12 pt-10 md:pt-20 pb-24 text-center">
+        <section className="container mx-auto px-4 md:px-12 pt-4 md:pt-20 pb-12 md:pb-24 text-center">
           <motion.div
             initial="hidden"
             animate="visible"
