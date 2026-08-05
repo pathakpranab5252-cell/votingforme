@@ -171,16 +171,24 @@ export default function NewPollWizard() {
           const createData = await createRes.json();
           activePollId = createData.poll?.id;
           setPollId(activePollId);
+        } else {
+          const errData = await createRes.json();
+          throw new Error(errData.error || 'Failed to create election in database');
         }
       }
 
       const validVotersList = voters.filter((v) => v.valid);
       if (activePollId) {
-        await fetch(`/api/polls/${activePollId}/launch`, {
+        const launchRes = await fetch(`/api/polls/${activePollId}/launch`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ voters: validVotersList }),
         });
+
+        if (!launchRes.ok) {
+          const launchErr = await launchRes.json();
+          console.warn('Launch API warning:', launchErr);
+        }
       }
       setIsLaunched(true);
     } catch (err: any) {
@@ -555,6 +563,11 @@ export default function NewPollWizard() {
                </motion.div>
             ) : (
                <div>
+                  {errorMsg && (
+                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-lg max-w-md mx-auto mb-6">
+                      {errorMsg}
+                    </div>
+                  )}
                   <div className="w-24 h-24 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-6">
                      <Rocket className="w-12 h-12 text-indigo-400" />
                   </div>

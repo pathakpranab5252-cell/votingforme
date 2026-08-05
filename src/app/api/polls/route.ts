@@ -21,22 +21,40 @@ export async function POST(request: Request) {
       );
     }
 
-    // Insert Poll
-    const { data: poll, error: pollError } = await supabase
+    // Build Insert Payload
+    const insertPayload: any = {
+      creator_id: user.id,
+      title,
+      description,
+      voting_type: voting_type || 'single_choice',
+      max_selections: max_selections || 1,
+      start_time,
+      end_time,
+      auto_publish_results,
+      status: 'draft',
+    };
+
+    let { data: poll, error: pollError } = await supabase
       .from('polls')
-      .insert({
-        creator_id: user.id,
-        title,
-        description,
-        voting_type: voting_type || 'single_choice',
-        max_selections: max_selections || 1,
-        start_time,
-        end_time,
-        auto_publish_results,
-        status: 'draft',
-      })
+      .insert(insertPayload)
       .select()
       .single();
+
+    // Fallback retry if columns voting_type / max_selections are missing in user Supabase project
+    if (pollError && (pollError.message.includes('column') || pollError.code === 'PGRST204' || pollError.message.includes('voting_type'))) {
+      console.warn('Voting type columns missing in Supabase, retrying with base columns...');
+      delete insertPayload.voting_type;
+      delete insertPayload.max_selections;
+
+      const retry = await supabase
+        .from('polls')
+        .insert(insertPayload)
+        .select()
+        .single();
+
+      poll = retry.data;
+      pollError = retry.error;
+    }
 
     if (pollError) throw pollError;
 
