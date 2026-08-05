@@ -56,9 +56,16 @@ export async function GET(
       votes: voteCounts[c.id] || 0,
     }));
 
+    // Return voter audit list for poll creator (who voted / who hasn't) WITHOUT candidate choices
+    const { data: voterDetails } = await supabase
+      .from('voters')
+      .select('id, name, email, has_voted, email_sent')
+      .eq('poll_id', id);
+
     return NextResponse.json({
       poll,
       candidates: candidatesWithVotes,
+      voter_list: voterDetails || [],
       stats: {
         total_voters: totalVoters,
         voted: votedCount,

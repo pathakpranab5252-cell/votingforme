@@ -58,16 +58,16 @@ export async function POST(request: Request) {
 
     if (updateError) throw updateError;
 
-    // Log activity
+    // Log activity (anonymized — no link between voter_id and candidate_id)
     await supabase.from('activity_log').insert({
       entity_type: 'vote',
       entity_id: voter.poll_id,
       action: 'vote_cast',
-      metadata: { voter_id: voter.id, candidate_id },
+      metadata: { voter_id: voter.id },
     });
 
-    // Send receipt email (non-blocking)
-    sendVoteReceipt(voter.email, poll.title, candidate.name).catch(console.error);
+    // Send receipt email (non-blocking, anonymous — does not contain candidate selection)
+    sendVoteReceipt(voter.email, poll.title).catch(console.error);
 
     return NextResponse.json({
       success: true,

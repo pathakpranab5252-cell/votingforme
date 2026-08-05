@@ -51,7 +51,7 @@ export async function sendVotingInvitation(to: string, props: InvitationEmailPro
   }
 }
 
-export async function sendVoteReceipt(to: string, pollTitle: string, candidateName: string) {
+export async function sendVoteReceipt(to: string, pollTitle: string) {
   try {
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
@@ -61,10 +61,10 @@ export async function sendVoteReceipt(to: string, pollTitle: string, candidateNa
         <div style="font-family: sans-serif; max-w: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px;">
           <h2 style="color: #4F46E5;">VotingForMe</h2>
           <h3>Vote Confirmed! 🎉</h3>
-          <p>Your vote for <strong>${pollTitle}</strong> has been securely recorded.</p>
-          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0; color: #64748b; font-size: 14px;">You voted for:</p>
-            <p style="margin: 5px 0 0 0; font-size: 18px; font-weight: bold;">${candidateName}</p>
+          <p>Your vote in <strong>${pollTitle}</strong> has been securely recorded.</p>
+          <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <p style="margin: 0; color: #10B981; font-size: 16px; font-weight: bold;">✓ Ballot Cast Successfully</p>
+            <p style="margin: 5px 0 0 0; font-size: 12px; color: #64748b;">Your selection remains 100% anonymous & encrypted.</p>
           </div>
           <p style="font-size: 14px; color: #666; margin-top: 30px;">
             Thank you for participating.<br/>
