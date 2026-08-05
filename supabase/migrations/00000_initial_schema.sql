@@ -3,6 +3,7 @@
 -- Enums
 CREATE TYPE user_role AS ENUM ('super_admin', 'poll_creator');
 CREATE TYPE poll_status AS ENUM ('draft', 'active', 'voting_open', 'closed', 'published');
+CREATE TYPE voting_type AS ENUM ('single_choice', 'multi_select_unordered', 'multi_select_ordered');
 CREATE TYPE entity_type AS ENUM ('poll', 'user', 'credit', 'vote');
 
 -- 1. Users Table (Extends Supabase auth.users)
@@ -26,6 +27,8 @@ CREATE TABLE public.polls (
   title TEXT NOT NULL,
   description TEXT,
   status poll_status DEFAULT 'draft',
+  voting_type voting_type DEFAULT 'single_choice',
+  max_selections INTEGER DEFAULT 1,
   start_time TIMESTAMPTZ,
   end_time TIMESTAMPTZ,
   credits_consumed INTEGER DEFAULT 0,
@@ -55,6 +58,7 @@ CREATE TABLE public.voters (
   has_voted BOOLEAN DEFAULT false,
   voted_at TIMESTAMPTZ,
   voted_for UUID REFERENCES public.candidates(id) ON DELETE SET NULL,
+  voted_for_selections JSONB DEFAULT '[]'::jsonb,
   email_sent BOOLEAN DEFAULT false,
   reminder_sent BOOLEAN DEFAULT false,
   UNIQUE(poll_id, email)

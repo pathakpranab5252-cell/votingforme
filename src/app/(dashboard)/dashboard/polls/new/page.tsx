@@ -40,6 +40,8 @@ export default function NewPollWizard() {
   const [currentStep, setCurrentStep] = useState<Step>('details');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [votingType, setVotingType] = useState<'single_choice' | 'multi_select_unordered' | 'multi_select_ordered'>('single_choice');
+  const [maxSelections, setMaxSelections] = useState(2);
   const [candidates, setCandidates] = useState<Candidate[]>([
     { id: '1', name: '', description: '' },
     { id: '2', name: '', description: '' },
@@ -125,6 +127,8 @@ export default function NewPollWizard() {
         body: JSON.stringify({
           title,
           description,
+          voting_type: votingType,
+          max_selections: maxSelections,
           candidates: validCandidates,
         }),
       });
@@ -157,6 +161,8 @@ export default function NewPollWizard() {
           body: JSON.stringify({
             title,
             description,
+            voting_type: votingType,
+            max_selections: maxSelections,
             candidates: validCandidates,
           }),
         });
@@ -222,10 +228,79 @@ export default function NewPollWizard() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Provide context or instructions for the voters..."
-                  rows={4}
+                  rows={3}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
                 />
               </div>
+
+              {/* Voting Type Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Voting Method & Rules
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setVotingType('single_choice')}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      votingType === 'single_choice'
+                        ? 'bg-indigo-500/10 border-indigo-500 text-white'
+                        : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/20'
+                    }`}
+                  >
+                    <div className="font-semibold text-sm mb-1 text-indigo-400">Single Choice</div>
+                    <div className="text-xs">Standard 1 vote per person. Voters select exactly 1 candidate.</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setVotingType('multi_select_unordered')}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      votingType === 'multi_select_unordered'
+                        ? 'bg-indigo-500/10 border-indigo-500 text-white'
+                        : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/20'
+                    }`}
+                  >
+                    <div className="font-semibold text-sm mb-1 text-purple-400">Multi-Select (Equal)</div>
+                    <div className="text-xs">Voters can pick up to N candidates. Each selection counts equally.</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setVotingType('multi_select_ordered')}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      votingType === 'multi_select_ordered'
+                        ? 'bg-indigo-500/10 border-indigo-500 text-white'
+                        : 'bg-white/5 border-white/10 text-slate-400 hover:border-white/20'
+                    }`}
+                  >
+                    <div className="font-semibold text-sm mb-1 text-emerald-400">Ranked / Ordered</div>
+                    <div className="text-xs">Voters rank candidates in order of preference (1st, 2nd, 3rd choice).</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Max Selections if Multi-Select */}
+              {votingType !== 'single_choice' && (
+                <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
+                    Maximum Number of Candidates per Voter
+                  </label>
+                  <input
+                    type="number"
+                    min={2}
+                    max={10}
+                    value={maxSelections}
+                    onChange={(e) => setMaxSelections(Math.max(2, parseInt(e.target.value) || 2))}
+                    className="w-32 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">
+                    {votingType === 'multi_select_unordered'
+                      ? `Each voter can select up to ${maxSelections} candidates.`
+                      : `Each voter will rank up to ${maxSelections} candidates in order of priority.`}
+                  </p>
+                </div>
+              )}
             </div>
           </motion.div>
         );

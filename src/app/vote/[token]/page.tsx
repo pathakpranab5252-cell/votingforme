@@ -84,10 +84,14 @@ export default function VotePage({ params }: { params: Promise<{ token: string }
   const [poll, setPoll] = useState<any>(mockPoll);
   const [candidates, setCandidates] = useState<any[]>(mockPoll.candidates);
   const [selected, setSelected] = useState<string | null>(null);
+  const [multiSelections, setMultiSelections] = useState<string[]>([]);
   const [pageState, setPageState] = useState<PageState>('voting');
   const [voterName, setVoterName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const votingType = poll.voting_type || 'single_choice';
+  const maxSelections = poll.max_selections || 1;
 
   useEffect(() => {
     async function loadBallot() {
@@ -117,10 +121,33 @@ export default function VotePage({ params }: { params: Promise<{ token: string }
   }, [token]);
 
   const timeLeft = useCountdown(poll.end_time ? new Date(poll.end_time) : mockPoll.endTime);
-  const selectedCandidate = candidates.find((c) => c.id === selected);
+  const selectedCandidate = candidates.find((c) => c.id === (multiSelections[0] || selected));
+
+  const handleSelectCandidate = (candidateId: string) => {
+    if (votingType === 'single_choice') {
+      setSelected(candidateId);
+      setMultiSelections([candidateId]);
+    } else if (votingType === 'multi_select_unordered') {
+      if (multiSelections.includes(candidateId)) {
+        setMultiSelections(multiSelections.filter((id) => id !== candidateId));
+      } else {
+        if (multiSelections.length < maxSelections) {
+          setMultiSelections([...multiSelections, candidateId]);
+        }
+      }
+    } else if (votingType === 'multi_select_ordered') {
+      if (multiSelections.includes(candidateId)) {
+        setMultiSelections(multiSelections.filter((id) => id !== candidateId));
+      } else {
+        if (multiSelections.length < maxSelections) {
+          setMultiSelections([...multiSelections, candidateId]);
+        }
+      }
+    }
+  };
 
   const handleCastVote = async () => {
-    if (!selected) return;
+    if (multiSelections.length === 0 && !selected) return;
     setIsSubmitting(true);
     setErrorMsg('');
 
@@ -130,7 +157,8 @@ export default function VotePage({ params }: { params: Promise<{ token: string }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token,
-          candidate_id: selected,
+          candidate_id: multiSelections[0] || selected,
+          selections: multiSelections,
         }),
       });
 
@@ -141,7 +169,6 @@ export default function VotePage({ params }: { params: Promise<{ token: string }
         if (res.status === 409) {
           setPageState('already_voted');
         } else {
-          // If mock/demo token, show success anyway for preview
           setPageState('success');
         }
       }
@@ -360,7 +387,10 @@ export default function VotePage({ params }: { params: Promise<{ token: string }
         {/* Candidate Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {candidates.map((candidate, i) => {
-            const isSelected = selected === candidate.id;
+            const selectedIndex = multiSelections.indexOf(candidate.id);
+            const isSelected = selectedIndex !== -1 || selected === candidate.id;
+            const rankOrdinal = selectedIndex === 0 ? '1st Choice' : selectedIndex === 1 ? '2nd Choice' : selectedIndex === 2 ? '3rd Choice' : `${selectedIndex + 1}th Choice`;
+
             return (
               <motion.button
                 key={candidate.id}
@@ -369,7 +399,7 @@ export default function VotePage({ params }: { params: Promise<{ token: string }
                 transition={{ delay: i * 0.1 }}
                 whileHover={{ y: -4 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => setSelected(candidate.id)}
+                onClick={() => handleSelectCandidate(candidate.id)}
                 className={`relative text-left p-6 rounded-2xl border transition-all duration-300 ${
                   isSelected
                     ? 'bg-indigo-500/10 border-indigo-500/50 shadow-lg shadow-indigo-500/10'
@@ -381,9 +411,13 @@ export default function VotePage({ params }: { params: Promise<{ token: string }
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute top-4 right-4 w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center"
+                    className={`absolute top-4 right-4 ${
+                      votingType === 'multi_select_ordered'
+                        ? 'px-2.5 py-1 rounded-full bg-emerald-500 text-white text-xs font-bold'
+                        : 'w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center'
+                    }`}
                   >
-                    <CheckCircle2 className="w-4 h-4 text-white" />
+                    {votingType === 'multi_select_ordered' ? rankOrdinal : <CheckCircle2 className="w-4 h-4 text-white" />}
                   </motion.div>
                 )}
 
@@ -421,7 +455,7 @@ export default function VotePage({ params }: { params: Promise<{ token: string }
 
       {/* Fixed Bottom Vote Bar */}
       <AnimatePresence>
-        {selected && (
+        {(multiSelections.length > 0 || selected) && (
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -430,8 +464,18 @@ export default function VotePage({ params }: { params: Promise<{ token: string }
           >
             <div className="max-w-3xl mx-auto flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Selected candidate</p>
-                <p className="text-white font-semibold">{selectedCandidate?.name}</p>
+                <p className="text-slate-400 text-sm">
+                  {votingType === 'single_choice'
+                    ? 'Selected candidate'
+                    : votingType === 'multi_select_unordered'
+                    ? `Selected ${multiSelections.length} of ${maxSelections} candidates`
+                    : `Ranked ${multiSelections.length} of ${maxSelections} candidates`}
+                </p>
+                <p className="text-white font-semibold">
+                  {votingType === 'single_choice'
+                    ? selectedCandidate?.name
+                    : `${multiSelections.length} Selection${multiSelections.length > 1 ? 's' : ''}`}
+                </p>
               </div>
               <button
                 onClick={() => setPageState('confirming')}

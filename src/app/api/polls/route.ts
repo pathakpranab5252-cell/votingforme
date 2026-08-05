@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, description, start_time, end_time, auto_publish_results, candidates } = body;
+    const { title, description, start_time, end_time, auto_publish_results, candidates, voting_type, max_selections } = body;
 
     if (!title || !candidates || candidates.length < 2) {
       return NextResponse.json(
@@ -28,6 +28,8 @@ export async function POST(request: Request) {
         creator_id: user.id,
         title,
         description,
+        voting_type: voting_type || 'single_choice',
+        max_selections: max_selections || 1,
         start_time,
         end_time,
         auto_publish_results,

@@ -6,16 +6,16 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient();
     const body = await request.json();
-    const { token, candidate_id } = body;
+    const { token, candidate_id, selections } = body;
 
-    if (!token || !candidate_id) {
-      return NextResponse.json({ error: 'Token and candidate_id are required' }, { status: 400 });
+    if (!token || (!candidate_id && (!selections || !selections.length))) {
+      return NextResponse.json({ error: 'Token and at least one candidate selection are required' }, { status: 400 });
     }
 
     // Lookup voter by token
     const { data: voter, error: voterError } = await supabase
       .from('voters')
-      .select('*, polls(id, title, status)')
+      .select('*, polls(id, title, status, voting_type, max_selections)')
       .eq('token', token)
       .single();
 
@@ -34,17 +34,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'This election is not currently accepting votes' }, { status: 403 });
     }
 
-    // Validate candidate belongs to this poll
-    const { data: candidate, error: candError } = await supabase
-      .from('candidates')
-      .select('id, name, poll_id')
-      .eq('id', candidate_id)
-      .eq('poll_id', voter.poll_id)
-      .single();
-
-    if (candError || !candidate) {
-      return NextResponse.json({ error: 'Invalid candidate for this election' }, { status: 400 });
-    }
+    const selectionsArray = selections || (candidate_id ? [candidate_id] : []);
+    const primaryCandidateId = candidate_id || (typeof selectionsArray[0] === 'string' ? selectionsArray[0] : selectionsArray[0]?.candidate_id);
 
     // Record the vote
     const { error: updateError } = await supabase
@@ -52,7 +43,8 @@ export async function POST(request: Request) {
       .update({
         has_voted: true,
         voted_at: new Date().toISOString(),
-        voted_for: candidate_id,
+        voted_for: primaryCandidateId,
+        voted_for_selections: selectionsArray,
       })
       .eq('id', voter.id);
 
@@ -105,7 +97,7 @@ export async function GET(request: Request) {
     // Fetch poll details and candidates
     const { data: poll } = await supabase
       .from('polls')
-      .select('id, title, description, status, end_time')
+      .select('id, title, description, status, end_time, voting_type, max_selections')
       .eq('id', voter.poll_id)
       .single();
 
