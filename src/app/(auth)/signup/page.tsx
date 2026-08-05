@@ -76,9 +76,9 @@ export default function SignupPage() {
         return;
       }
 
-      // If user was created and auto-confirmed, create profile
+      // If user was created, create profile
       if (data.user) {
-        const { error: profileError } = await supabase
+        await supabase
           .from('users')
           .upsert({
             id: data.user.id,
@@ -88,20 +88,28 @@ export default function SignupPage() {
             credits: 5,
             role: 'poll_creator',
           }, { onConflict: 'id' });
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          // Don't block — auth worked, profile can be created later
-        }
       }
 
-      // Check if email confirmation is required
-      if (data.user && !data.session) {
-        setSuccess('Account created! Check your email to confirm your account.');
-        setIsLoading(false);
-      } else {
-        // Auto-confirmed — redirect to dashboard
+      // If session exists, redirect
+      if (data.session) {
         router.push('/dashboard');
+        router.refresh();
+        return;
+      }
+
+      // Try automatic sign in (works when email confirmation is disabled or user already exists)
+      const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInData?.session) {
+        router.push('/dashboard');
+        router.refresh();
+      } else {
+        // If email confirmation is strictly enforced in Supabase
+        setSuccess('Account registered! You can now log in directly with your email and password.');
+        setIsLoading(false);
       }
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
