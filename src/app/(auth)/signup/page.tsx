@@ -71,7 +71,23 @@ export default function SignupPage() {
       });
 
       if (signUpError) {
-        setError(signUpError.message);
+        // Fallback: try signing in directly if user was already registered
+        const { data: fallbackSignIn } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (fallbackSignIn?.session) {
+          router.push('/dashboard');
+          router.refresh();
+          return;
+        }
+
+        if (signUpError.message.toLowerCase().includes('rate limit')) {
+          setError('Supabase email limit reached. Try logging in directly with your password, or turn off Email Confirmation in Supabase.');
+        } else {
+          setError(signUpError.message);
+        }
         setIsLoading(false);
         return;
       }
