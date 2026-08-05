@@ -83,8 +83,12 @@ export default function SignupPage() {
           return;
         }
 
-        if (signUpError.message.toLowerCase().includes('rate limit')) {
-          setError('Supabase email limit reached. Try logging in directly with your password, or turn off Email Confirmation in Supabase.');
+        if (signUpError.message.toLowerCase().includes('already registered') || 
+            signUpError.message.toLowerCase().includes('already in use') || 
+            signUpError.message.toLowerCase().includes('already exists')) {
+          setError('This email is already registered. Please sign in below or use a different email.');
+        } else if (signUpError.message.toLowerCase().includes('rate limit')) {
+          setError('Supabase email limit reached. Try signing in directly with your email & password.');
         } else {
           setError(signUpError.message);
         }
