@@ -24,7 +24,7 @@ export async function sendVotingInvitation(to: string, props: InvitationEmailPro
     }
 
     const resend = new Resend(apiKey);
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'VotingForMe <onboarding@resend.dev>';
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
     const { data, error } = await resend.emails.send({
       from: fromEmail,
@@ -69,7 +69,7 @@ export async function sendVoteReceipt(to: string, pollTitle: string) {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) return { success: false, error: { message: 'RESEND_API_KEY missing' } };
     const resend = new Resend(apiKey);
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'VotingForMe <onboarding@resend.dev>';
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 
     const { data, error } = await resend.emails.send({
       from: fromEmail,
