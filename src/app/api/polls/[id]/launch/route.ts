@@ -119,11 +119,10 @@ export async function POST(
       })
     );
 
-    // Fire emails in parallel, don't block the response
-    Promise.allSettled(emailPromises).then((results) => {
-      const sent = results.filter(r => r.status === 'fulfilled' && (r.value as any).success).length;
-      console.log(`Emails sent: ${sent}/${results.length}`);
-    }).catch(console.error);
+    // Fire emails in parallel and log results
+    const emailResults = await Promise.allSettled(emailPromises);
+    const sentCount = emailResults.filter(r => r.status === 'fulfilled' && (r.value as any).success).length;
+    console.log(`Resend email dispatch complete: ${sentCount}/${emailResults.length} delivered.`);
 
     // Log activity
     await supabase.from('activity_log').insert({

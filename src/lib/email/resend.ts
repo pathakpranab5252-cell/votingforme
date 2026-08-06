@@ -1,7 +1,8 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = 'VotingForMe <noreply@votingforme.com>'; // Requires domain verification in Resend
+const resendKey = process.env.RESEND_API_KEY || '';
+const resend = new Resend(resendKey);
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'VotingForMe <onboarding@resend.dev>';
 
 export interface InvitationEmailProps {
   voterName?: string;
