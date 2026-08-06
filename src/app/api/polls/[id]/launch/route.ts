@@ -68,7 +68,14 @@ export async function POST(
       .insert(voterRows)
       .select('id, name, email, token');
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      if (insertError.message.includes('schema cache') || insertError.message.includes('voters') || insertError.code === 'PGRST204' || insertError.code === '42P01') {
+        return NextResponse.json({
+          error: 'The "public.voters" table is missing in your Supabase database. Please run the SQL setup snippet in your Supabase SQL Editor.',
+        }, { status: 500 });
+      }
+      throw insertError;
+    }
 
     // Deduct credits
     const { error: creditError } = await supabase
