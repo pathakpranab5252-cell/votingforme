@@ -12,7 +12,8 @@ import {
   Plus,
   Upload,
   Calendar,
-  MoreVertical
+  MoreVertical,
+  Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -186,7 +187,12 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-4">
-            {pollsList.length === 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-8 text-slate-400 gap-2">
+                <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+                <span className="text-xs">Loading elections...</span>
+              </div>
+            ) : pollsList.length === 0 ? (
               <div className="text-center py-8 text-slate-400">
                 <Vote className="w-12 h-12 text-slate-600 mx-auto mb-3" />
                 <p className="text-sm">No elections created yet.</p>

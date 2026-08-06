@@ -51,12 +51,12 @@ import { use, useEffect } from 'react';
 
 export default function PollDashboard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [poll, setPoll] = useState<any>(MOCK_POLL);
-  const [voters, setVoters] = useState<any[]>(VOTERS_DATA);
+  const [poll, setPoll] = useState<any>(null);
+  const [voters, setVoters] = useState<any[]>([]);
   const [stats, setStats] = useState<any>({
-    totalVoters: MOCK_POLL.totalVoters,
-    votesCast: MOCK_POLL.votesCast,
-    participationRate: MOCK_POLL.participationRate,
+    totalVoters: 0,
+    votesCast: 0,
+    participationRate: 0,
   });
   const [activeTab, setActiveTab] = useState<'voted' | 'not_voted'>('voted');
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,15 +73,15 @@ export default function PollDashboard({ params }: { params: Promise<{ id: string
           }
           if (data.stats) {
             setStats({
-              totalVoters: data.stats.total_voters,
-              votesCast: data.stats.voted,
-              participationRate: data.stats.participation_rate,
+              totalVoters: data.stats.total_voters || 0,
+              votesCast: data.stats.voted || 0,
+              participationRate: data.stats.participation_rate || 0,
             });
           }
-          if (data.voter_list && data.voter_list.length > 0) {
+          if (Array.isArray(data.voter_list)) {
             const mappedVoters = data.voter_list.map((v: any) => ({
               id: v.id,
-              name: v.name || 'Anonymous Voter',
+              name: v.name || 'Voter',
               email: v.email,
               status: v.has_voted ? 'voted' : 'not_voted',
               votedAt: v.has_voted ? 'Recorded' : null,
@@ -90,7 +90,7 @@ export default function PollDashboard({ params }: { params: Promise<{ id: string
           }
         }
       } catch (err) {
-        console.warn('Using mock poll detail fallback:', err);
+        console.warn('Error loading poll detail:', err);
       } finally {
         setLoading(false);
       }
@@ -114,6 +114,15 @@ export default function PollDashboard({ params }: { params: Promise<{ id: string
       console.error('Error closing poll:', err);
     }
   };
+
+  if (loading || !poll) {
+    return (
+      <div className="min-h-screen bg-[#0F0D1A] flex flex-col items-center justify-center p-6 text-slate-400">
+        <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mb-4" />
+        <p className="text-sm font-medium">Loading election details...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0F0D1A] text-slate-200 font-sans p-6 md:p-8">
