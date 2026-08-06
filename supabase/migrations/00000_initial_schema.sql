@@ -117,8 +117,14 @@ ON public.polls FOR UPDATE USING (true);
 CREATE POLICY "Anyone can view candidates for a poll"
 ON public.candidates FOR SELECT USING (true);
 
-CREATE POLICY "Creators can manage candidates"
-ON public.candidates FOR ALL USING (true);
+CREATE POLICY "Anyone can insert candidates"
+ON public.candidates FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Anyone can update candidates"
+ON public.candidates FOR UPDATE USING (true);
+
+CREATE POLICY "Anyone can delete candidates"
+ON public.candidates FOR DELETE USING (true);
 
 -- Policies for public.voters
 CREATE POLICY "Anyone can view ballot by token"
