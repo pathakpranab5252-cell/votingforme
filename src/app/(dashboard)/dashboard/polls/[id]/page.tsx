@@ -104,6 +104,17 @@ export default function PollDashboard({ params }: { params: Promise<{ id: string
      voter.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const handleCloseVoting = async () => {
+    try {
+      const res = await fetch(`/api/polls/${id}/close`, { method: 'POST' });
+      if (res.ok) {
+        setPoll((prev: any) => ({ ...prev, status: 'closed' }));
+      }
+    } catch (err) {
+      console.error('Error closing poll:', err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0F0D1A] text-slate-200 font-sans p-6 md:p-8">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -132,9 +143,12 @@ export default function PollDashboard({ params }: { params: Promise<{ id: string
                 <Mail className="w-4 h-4 text-slate-300" />
                 Send Reminder
               </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-lg text-sm font-medium transition-colors">
+              <button 
+                onClick={handleCloseVoting}
+                className="flex items-center gap-2 px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+              >
                 <StopCircle className="w-4 h-4" />
-                Close Voting
+                {poll.status === 'closed' ? 'Closed' : 'Close Voting'}
               </button>
               <Link 
                 href={`/dashboard/polls/${poll.id}/results`}

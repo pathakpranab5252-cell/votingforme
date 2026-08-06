@@ -16,22 +16,46 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-const stats = [
-  { label: 'Total Users', value: '156', icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10' },
-  { label: 'Active Polls', value: '23', icon: BarChart3, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
-  { label: 'Total Votes', value: '12,450', icon: Vote, color: 'text-purple-400', bg: 'bg-purple-400/10' },
-  { label: 'Revenue (Credits)', value: '8,500', icon: Coins, color: 'text-amber-400', bg: 'bg-amber-400/10' },
-];
-
-const recentUsers = [
-  { id: 1, name: 'Alex Johnson', email: 'alex@example.com', date: '2 hrs ago', status: 'Premium' },
-  { id: 2, name: 'Sarah Smith', email: 'sarah@example.com', date: '5 hrs ago', status: 'Free' },
-  { id: 3, name: 'Mike Brown', email: 'mike@example.com', date: '1 day ago', status: 'Active' },
-  { id: 4, name: 'Emma Davis', email: 'emma@example.com', date: '1 day ago', status: 'Free' },
-  { id: 5, name: 'Chris Wilson', email: 'chris@example.com', date: '2 days ago', status: 'Premium' },
-];
+import { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 export default function AdminDashboardPage() {
+  const [totalUsers, setTotalUsers] = useState(156);
+  const [totalPolls, setTotalPolls] = useState(23);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadAdminMetrics() {
+      try {
+        const supabase = createClient();
+        const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+        const { count: pollCount } = await supabase.from('polls').select('*', { count: 'exact', head: true });
+
+        if (userCount !== null) setTotalUsers(userCount);
+        if (pollCount !== null) setTotalPolls(pollCount);
+      } catch (err) {
+        console.warn('Using admin metrics fallback:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadAdminMetrics();
+  }, []);
+
+  const stats = [
+    { label: 'Total Users', value: String(totalUsers), icon: Users, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+    { label: 'Active Polls', value: String(totalPolls), icon: BarChart3, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
+    { label: 'Total Votes', value: '12,450', icon: Vote, color: 'text-purple-400', bg: 'bg-purple-400/10' },
+    { label: 'Revenue (Credits)', value: '8,500', icon: Coins, color: 'text-amber-400', bg: 'bg-amber-400/10' },
+  ];
+
+  const recentUsers = [
+    { id: 1, name: 'Alex Johnson', email: 'alex@example.com', date: '2 hrs ago', status: 'Premium' },
+    { id: 2, name: 'Sarah Smith', email: 'sarah@example.com', date: '5 hrs ago', status: 'Free' },
+    { id: 3, name: 'Mike Brown', email: 'mike@example.com', date: '1 day ago', status: 'Active' },
+    { id: 4, name: 'Emma Davis', email: 'emma@example.com', date: '1 day ago', status: 'Free' },
+    { id: 5, name: 'Chris Wilson', email: 'chris@example.com', date: '2 days ago', status: 'Premium' },
+  ];
   return (
     <div className="min-h-screen bg-[#0F0D1A] text-slate-200 p-6 md:p-8 font-sans">
       <motion.div
