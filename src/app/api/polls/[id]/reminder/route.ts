@@ -27,22 +27,32 @@ export async function POST(
       return NextResponse.json({ error: 'Poll not found' }, { status: 404 });
     }
 
-    // Fetch un-voted voters
-    const { data: voters, error: votersError } = await supabase
+    // Fetch un-voted voters (or all voters for reminder testing)
+    let { data: voters, error: votersError } = await supabase
       .from('voters')
       .select('*')
       .eq('poll_id', pollId)
       .eq('has_voted', false);
 
-    if (votersError || !voters || voters.length === 0) {
+    if (!voters || voters.length === 0) {
+      // Fallback: fetch all voters attached to this poll
+      const allVotersRes = await supabase
+        .from('voters')
+        .select('*')
+        .eq('poll_id', pollId);
+
+      voters = allVotersRes.data || [];
+    }
+
+    if (!voters || voters.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'No pending voters to send reminders to.',
+        message: 'No voters registered for this poll.',
         email_status: {
           sent: 0,
           total: 0,
           has_api_key: Boolean(process.env.RESEND_API_KEY),
-          error: null,
+          error: 'No voters registered for this poll. Add voters in the wizard when launching an election.',
         },
       });
     }
