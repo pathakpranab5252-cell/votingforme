@@ -14,8 +14,20 @@ export interface InvitationEmailProps {
 
 export async function sendVotingInvitation(to: string, props: InvitationEmailProps) {
   try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.warn('RESEND_API_KEY environment variable is not defined.');
+      return {
+        success: false,
+        error: { message: 'RESEND_API_KEY is not configured in Vercel Environment Variables.' },
+      };
+    }
+
+    const resend = new Resend(apiKey);
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'VotingForMe <onboarding@resend.dev>';
+
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: fromEmail,
       to,
       subject: `Invitation to Vote: ${props.pollTitle}`,
       html: `
@@ -46,16 +58,21 @@ export async function sendVotingInvitation(to: string, props: InvitationEmailPro
       return { success: false, error };
     }
     return { success: true, data };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Email sending failed:', error);
-    return { success: false, error };
+    return { success: false, error: { message: error.message || 'Email sending failed' } };
   }
 }
 
 export async function sendVoteReceipt(to: string, pollTitle: string) {
   try {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return { success: false, error: { message: 'RESEND_API_KEY missing' } };
+    const resend = new Resend(apiKey);
+    const fromEmail = process.env.RESEND_FROM_EMAIL || 'VotingForMe <onboarding@resend.dev>';
+
     const { data, error } = await resend.emails.send({
-      from: FROM_EMAIL,
+      from: fromEmail,
       to,
       subject: `Vote Receipt: ${pollTitle}`,
       html: `
@@ -75,7 +92,7 @@ export async function sendVoteReceipt(to: string, pollTitle: string) {
       `,
     });
     return { success: !error, error, data };
-  } catch (error) {
-    return { success: false, error };
+  } catch (error: any) {
+    return { success: false, error: { message: error.message || 'Receipt email failed' } };
   }
 }
