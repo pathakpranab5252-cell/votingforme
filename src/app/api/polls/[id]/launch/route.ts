@@ -134,11 +134,18 @@ export async function POST(
       metadata: { voter_count: voters.length },
     });
 
+    const voterLinks = (insertedVoters || []).map((v: any) => ({
+      name: v.name,
+      email: v.email,
+      url: `${baseUrl}/vote/${v.token}`,
+    }));
+
     return NextResponse.json({
       success: true,
       message: `Poll launched! Sending ${voters.length} invitation emails.`,
       poll_id: pollId,
       voters_count: insertedVoters?.length ?? 0,
+      voter_links: voterLinks,
     });
   } catch (error: any) {
     console.error('Launch error:', error);

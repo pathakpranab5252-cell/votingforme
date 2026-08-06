@@ -96,7 +96,7 @@ const tabs: { label: string; value: string }[] = [
 export default function PollsPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
-  const [polls, setPolls] = useState<Poll[]>(mockPolls);
+  const [polls, setPolls] = useState<Poll[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -119,7 +119,8 @@ export default function PollsPage() {
           }
         }
       } catch (err) {
-        console.warn('Using mock polls fallback:', err);
+        console.warn('Error fetching polls:', err);
+        setPolls([]);
       } finally {
         setIsLoading(false);
       }

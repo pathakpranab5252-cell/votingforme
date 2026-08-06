@@ -78,6 +78,7 @@ export default function NewPollWizard() {
       setVoters(formatted);
     }
   }, [manualVoters, voterInputMode]);
+  const [generatedVoterLinks, setGeneratedVoterLinks] = useState<Array<{ name: string; email: string; url: string }>>([]);
   const [credits, setCredits] = useState(100);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLaunching, setIsLaunched] = useState(false);
@@ -228,7 +229,12 @@ export default function NewPollWizard() {
           body: JSON.stringify({ voters: validVotersList }),
         });
 
-        if (!launchRes.ok) {
+        if (launchRes.ok) {
+          const launchData = await launchRes.json();
+          if (Array.isArray(launchData.voter_links)) {
+            setGeneratedVoterLinks(launchData.voter_links);
+          }
+        } else {
           const launchErr = await launchRes.json();
           console.warn('Launch API warning:', launchErr);
         }
@@ -742,9 +748,52 @@ export default function NewPollWizard() {
                     <CheckCircle2 className="w-12 h-12 text-green-400" />
                  </div>
                  <h2 className="text-3xl font-bold text-white mb-4">Election Launched! 🎉</h2>
-                 <p className="text-slate-400 max-w-md mx-auto mb-8">
+                 <p className="text-slate-400 max-w-md mx-auto mb-6">
                    Your election is now live. We are currently sending out {voters.filter(v => v.valid).length} invitation emails to your voters.
                  </p>
+
+                 {/* Generated Voting Links for Testing */}
+                 {generatedVoterLinks.length > 0 && (
+                   <div className="max-w-xl mx-auto mb-8 bg-white/5 border border-white/10 rounded-2xl p-5 text-left space-y-4">
+                     <div className="flex items-center justify-between">
+                       <h4 className="text-sm font-semibold text-white">Direct Secret Voting Links for Testing</h4>
+                       <span className="text-xs text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20">
+                         Instant Test Links
+                       </span>
+                     </div>
+                     <p className="text-xs text-slate-400">
+                       You can copy any voter link below or click &quot;Open Ballot&quot; to test voting right now!
+                     </p>
+                     <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                       {generatedVoterLinks.map((link, idx) => (
+                         <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-black/30 border border-white/5 rounded-xl gap-2 text-xs">
+                           <div>
+                             <p className="font-semibold text-white">{link.name || 'Voter'} ({link.email})</p>
+                             <p className="text-slate-400 font-mono text-[11px] truncate max-w-xs">{link.url}</p>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <button
+                               type="button"
+                               onClick={() => navigator.clipboard.writeText(link.url)}
+                               className="px-2.5 py-1.5 bg-white/10 hover:bg-white/15 text-slate-200 rounded-lg font-medium transition-colors cursor-pointer"
+                             >
+                               Copy Link
+                             </button>
+                             <a
+                               href={link.url}
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors"
+                             >
+                               Open Ballot ↗
+                             </a>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 )}
+
                  <Link
                    href="/dashboard/polls"
                    className="inline-block px-8 py-3 bg-white/10 hover:bg-white/15 text-white font-medium rounded-xl transition-colors"
