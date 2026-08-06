@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import {
@@ -15,6 +15,8 @@ import {
   ChevronLeft,
   AlertCircle,
   File,
+  UserPlus,
+  Download,
 } from 'lucide-react';
 
 /* ─── Types ─── */
@@ -46,7 +48,36 @@ export default function NewPollWizard() {
     { id: '1', name: '', description: '' },
     { id: '2', name: '', description: '' },
   ]);
+  const [voterInputMode, setVoterInputMode] = useState<'manual' | 'upload'>('manual');
+  const [manualVoters, setManualVoters] = useState<Array<{ name: string; email: string; phone: string }>>([
+    { name: '', email: '', phone: '' },
+    { name: '', email: '', phone: '' },
+  ]);
   const [voters, setVoters] = useState<Voter[]>([]);
+
+  useEffect(() => {
+    if (voterInputMode === 'manual') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const formatted = manualVoters
+        .filter((v) => v.email.trim() || v.name.trim())
+        .map((v) => {
+          const isValid = Boolean(v.email.trim() && v.name.trim() && emailRegex.test(v.email.trim()));
+          let issue = undefined;
+          if (!v.name.trim()) issue = 'Name required';
+          else if (!v.email.trim()) issue = 'Email required';
+          else if (!emailRegex.test(v.email.trim())) issue = 'Invalid Email';
+
+          return {
+            name: v.name.trim(),
+            email: v.email.trim(),
+            phone: v.phone.trim(),
+            valid: isValid,
+            issue,
+          };
+        });
+      setVoters(formatted);
+    }
+  }, [manualVoters, voterInputMode]);
   const [credits, setCredits] = useState(100);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLaunching, setIsLaunched] = useState(false);
@@ -71,6 +102,18 @@ export default function NewPollWizard() {
       return candidates.filter((c) => c.name.trim()).length >= 2;
     if (currentStep === 'voters') return voters.filter((v) => v.valid).length > 0;
     return true;
+  };
+
+  // Download Sample CSV Template
+  const downloadSampleCSV = () => {
+    const csvContent = "data:text/csv;charset=utf-8,Name,Email,Phone\nJohn Doe,john@example.com,+1234567890\nJane Smith,jane@example.com,+1987654321";
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "votingforme_voters_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Real File Upload Handler
@@ -399,86 +442,234 @@ export default function NewPollWizard() {
             exit={{ opacity: 0, x: -20 }}
             className="space-y-6"
           >
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-2">Import Voters</h2>
-              <p className="text-slate-400">Upload a CSV or Excel file containing voter emails.</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-1">Add Voters</h2>
+                <p className="text-slate-400 text-sm">Add test voters manually or bulk upload a CSV/Excel list.</p>
+              </div>
+              
+              <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/10 self-start md:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setVoterInputMode('manual')}
+                  className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    voterInputMode === 'manual'
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  ✍️ Manual Entry (Free Test)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVoterInputMode('upload')}
+                  className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                    voterInputMode === 'upload'
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  📁 Bulk Upload (CSV/Excel)
+                </button>
+              </div>
             </div>
 
-            {voters.length === 0 ? (
-              <button
-                onClick={handleMockUpload}
-                className="w-full py-16 border-2 border-dashed border-white/20 rounded-2xl bg-white/5 hover:bg-white/[0.07] transition-all flex flex-col items-center justify-center text-center group"
-              >
-                <div className="w-16 h-16 bg-indigo-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Upload className="w-8 h-8 text-indigo-400" />
-                </div>
-                <p className="text-lg font-medium text-white mb-1">Click to upload or drag and drop</p>
-                <p className="text-sm text-slate-400">CSV, XLS, or XLSX (max 5MB)</p>
-              </button>
-            ) : (
-              <div className="space-y-6">
-                {/* Validation Summary */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-white">{voters.length}</p>
-                    <p className="text-xs text-slate-400 uppercase tracking-wider mt-1">Total</p>
+            {voterInputMode === 'manual' ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <UserPlus className="w-5 h-5 text-indigo-400 shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-semibold text-white">Manual Voter Input Table</h4>
+                      <p className="text-xs text-slate-300">Add 2-3 emails here to test the election for free. Name & Email are mandatory.</p>
+                    </div>
                   </div>
-                  <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-green-400">{validCount}</p>
-                    <p className="text-xs text-green-400/80 uppercase tracking-wider mt-1">Valid</p>
-                  </div>
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-center">
-                    <p className="text-2xl font-bold text-amber-400">{voters.length - validCount}</p>
-                    <p className="text-xs text-amber-400/80 uppercase tracking-wider mt-1">Issues</p>
-                  </div>
+                  <span className="text-xs font-bold text-emerald-400 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                    {validCount} Valid Voters
+                  </span>
                 </div>
 
-                {/* Credit Check */}
-                <div className={`p-4 rounded-xl border flex items-start gap-3 ${validCount > credits ? 'bg-red-500/10 border-red-500/20' : 'bg-indigo-500/10 border-indigo-500/20'}`}>
-                  <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${validCount > credits ? 'text-red-400' : 'text-indigo-400'}`} />
-                  <div>
-                    <h4 className={`text-sm font-medium ${validCount > credits ? 'text-red-400' : 'text-indigo-400'}`}>
-                      Credit Check
-                    </h4>
-                    <p className="text-sm text-slate-300 mt-1">
-                      Importing {validCount} voters will consume {validCount} credits. You currently have {credits} credits available.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Preview Table */}
-                <div className="border border-white/10 rounded-xl overflow-hidden">
-                  <div className="bg-white/5 px-4 py-2 border-b border-white/10 flex justify-between items-center">
-                    <span className="text-sm font-medium text-slate-300">Data Preview</span>
-                    <button onClick={() => setVoters([])} className="text-xs text-red-400 hover:text-red-300">Remove File</button>
-                  </div>
+                {/* Manual Table */}
+                <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                      <thead className="text-xs text-slate-400 bg-black/20">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-black/30 text-xs text-slate-400 uppercase">
                         <tr>
-                          <th className="px-4 py-3 font-medium">Name</th>
-                          <th className="px-4 py-3 font-medium">Email</th>
-                          <th className="px-4 py-3 font-medium">Status</th>
+                          <th className="px-4 py-3 font-semibold">Name <span className="text-red-400">*</span></th>
+                          <th className="px-4 py-3 font-semibold">Email Address <span className="text-red-400">*</span></th>
+                          <th className="px-4 py-3 font-semibold">Phone (Optional)</th>
+                          <th className="px-4 py-3 font-semibold text-right">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
-                        {voters.map((v, i) => (
-                          <tr key={i} className="bg-white/[0.02]">
-                            <td className="px-4 py-3 text-slate-300">{v.name || '-'}</td>
-                            <td className="px-4 py-3 text-slate-300">{v.email}</td>
-                            <td className="px-4 py-3">
-                              {v.valid ? (
-                                <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-medium bg-green-500/10 text-green-400">Valid</span>
-                              ) : (
-                                <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400" title={v.issue}>{v.issue}</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                        {manualVoters.map((row, idx) => {
+                          const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email.trim());
+                          const isRowValid = Boolean(row.name.trim() && row.email.trim() && isEmailValid);
+
+                          return (
+                            <tr key={idx} className="hover:bg-white/[0.02] transition-colors">
+                              <td className="px-4 py-3">
+                                <input
+                                  type="text"
+                                  value={row.name}
+                                  onChange={(e) => {
+                                    const next = [...manualVoters];
+                                    next[idx].name = e.target.value;
+                                    setManualVoters(next);
+                                  }}
+                                  placeholder="e.g. John Doe"
+                                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                                />
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="relative">
+                                  <input
+                                    type="email"
+                                    value={row.email}
+                                    onChange={(e) => {
+                                      const next = [...manualVoters];
+                                      next[idx].email = e.target.value;
+                                      setManualVoters(next);
+                                    }}
+                                    placeholder="e.g. john@example.com"
+                                    className={`w-full bg-white/5 border rounded-lg px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 text-sm ${
+                                      row.email.trim()
+                                        ? isEmailValid
+                                          ? 'border-green-500/50 focus:ring-green-500'
+                                          : 'border-red-500/50 focus:ring-red-500'
+                                        : 'border-white/10 focus:ring-indigo-500'
+                                    }`}
+                                  />
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <input
+                                  type="tel"
+                                  value={row.phone}
+                                  onChange={(e) => {
+                                    const next = [...manualVoters];
+                                    next[idx].phone = e.target.value;
+                                    setManualVoters(next);
+                                  }}
+                                  placeholder="+1 234 567 890"
+                                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                                />
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                {manualVoters.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setManualVoters(manualVoters.filter((_, i) => i !== idx))}
+                                    className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-white/5 rounded-lg transition-colors"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
+
+                  <div className="p-4 bg-white/[0.02] border-t border-white/10 flex justify-between items-center">
+                    <button
+                      type="button"
+                      onClick={() => setManualVoters([...manualVoters, { name: '', email: '', phone: '' }])}
+                      className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-300 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Another Voter Row
+                    </button>
+                    <span className="text-xs text-slate-400">
+                      {validCount} ready for invitation
+                    </span>
+                  </div>
                 </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Bulk Upload Header & Template Downloader */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
+                  <div>
+                    <h4 className="text-sm font-semibold text-white">Bulk File Upload</h4>
+                    <p className="text-xs text-slate-400">Upload a CSV or Excel spreadsheet containing your voter list.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={downloadSampleCSV}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/15 text-slate-200 border border-white/10 rounded-xl text-xs font-medium flex items-center gap-2 transition-all shrink-0"
+                  >
+                    <Download className="w-3.5 h-3.5 text-indigo-400" />
+                    Download CSV Template (name, email, phone)
+                  </button>
+                </div>
+
+                {voters.length === 0 ? (
+                  <button
+                    onClick={handleMockUpload}
+                    className="w-full py-16 border-2 border-dashed border-white/20 rounded-2xl bg-white/5 hover:bg-white/[0.07] transition-all flex flex-col items-center justify-center text-center group"
+                  >
+                    <div className="w-16 h-16 bg-indigo-500/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <Upload className="w-8 h-8 text-indigo-400" />
+                    </div>
+                    <p className="text-lg font-medium text-white mb-1">Click to upload or drag and drop</p>
+                    <p className="text-sm text-slate-400">CSV, XLS, or XLSX (max 5MB)</p>
+                  </button>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Validation Summary */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center">
+                        <p className="text-2xl font-bold text-white">{voters.length}</p>
+                        <p className="text-xs text-slate-400 uppercase tracking-wider mt-1">Total</p>
+                      </div>
+                      <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 text-center">
+                        <p className="text-2xl font-bold text-green-400">{validCount}</p>
+                        <p className="text-xs text-green-400/80 uppercase tracking-wider mt-1">Valid</p>
+                      </div>
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-center">
+                        <p className="text-2xl font-bold text-amber-400">{voters.length - validCount}</p>
+                        <p className="text-xs text-amber-400/80 uppercase tracking-wider mt-1">Issues</p>
+                      </div>
+                    </div>
+
+                    {/* Preview Table */}
+                    <div className="border border-white/10 rounded-xl overflow-hidden">
+                      <div className="bg-white/5 px-4 py-2 border-b border-white/10 flex justify-between items-center">
+                        <span className="text-sm font-medium text-slate-300">File Preview</span>
+                        <button onClick={() => setVoters([])} className="text-xs text-red-400 hover:text-red-300">Remove File</button>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                          <thead className="text-xs text-slate-400 bg-black/20">
+                            <tr>
+                              <th className="px-4 py-3 font-medium">Name</th>
+                              <th className="px-4 py-3 font-medium">Email</th>
+                              <th className="px-4 py-3 font-medium">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-white/5">
+                            {voters.map((v, i) => (
+                              <tr key={i} className="bg-white/[0.02]">
+                                <td className="px-4 py-3 text-slate-300">{v.name || '-'}</td>
+                                <td className="px-4 py-3 text-slate-300">{v.email}</td>
+                                <td className="px-4 py-3">
+                                  {v.valid ? (
+                                    <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-medium bg-green-500/10 text-green-400">Valid</span>
+                                  ) : (
+                                    <span className="inline-flex items-center px-2 py-1 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400" title={v.issue}>{v.issue}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </motion.div>
