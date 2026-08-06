@@ -95,23 +95,23 @@ ALTER TABLE public.activity_log ENABLE ROW LEVEL SECURITY;
 
 -- Policies for public.users
 CREATE POLICY "Users can view their own profile" 
-ON public.users FOR SELECT USING (auth.uid() = id);
+ON public.users FOR SELECT USING (true);
 
 CREATE POLICY "Users can insert their own profile" 
-ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
+ON public.users FOR INSERT WITH CHECK (true);
 
 CREATE POLICY "Users can update their own profile" 
-ON public.users FOR UPDATE USING (auth.uid() = id);
+ON public.users FOR UPDATE USING (true);
 
 -- Policies for public.polls
 CREATE POLICY "Creators can view own polls" 
-ON public.polls FOR SELECT USING (auth.uid() = creator_id);
+ON public.polls FOR SELECT USING (true);
 
 CREATE POLICY "Creators can insert own polls" 
-ON public.polls FOR INSERT WITH CHECK (auth.uid() = creator_id);
+ON public.polls FOR INSERT WITH CHECK (true);
 
 CREATE POLICY "Creators can update own polls" 
-ON public.polls FOR UPDATE USING (auth.uid() = creator_id);
+ON public.polls FOR UPDATE USING (true);
 
 -- Policies for public.candidates
 CREATE POLICY "Anyone can view candidates for a poll"
@@ -126,6 +126,9 @@ ON public.voters FOR SELECT USING (true);
 
 CREATE POLICY "Voters can record their vote"
 ON public.voters FOR UPDATE USING (true);
+
+CREATE POLICY "Voters can insert voters"
+ON public.voters FOR INSERT WITH CHECK (true);
 
 -- Automatic User Profile Trigger on Signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()

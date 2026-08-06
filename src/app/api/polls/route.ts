@@ -21,7 +21,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // Build Insert Payload
+    // Ensure user profile exists in public.users to satisfy foreign key & RLS constraints
+    const { data: existingProfile } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (!existingProfile) {
+      await supabase
+        .from('users')
+        .upsert({
+          id: user.id,
+          email: user.email || '',
+          full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+          credits: 5,
+          role: 'poll_creator',
+        });
+    }
     const insertPayload: any = {
       creator_id: user.id,
       title,
