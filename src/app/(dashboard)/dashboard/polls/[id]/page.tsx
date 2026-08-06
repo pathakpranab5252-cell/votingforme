@@ -104,6 +104,31 @@ export default function PollDashboard({ params }: { params: Promise<{ id: string
      voter.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const [emailStatus, setEmailStatus] = useState<any>(null);
+  const [sendingReminder, setSendingReminder] = useState(false);
+
+  const handleSendReminder = async () => {
+    setSendingReminder(true);
+    try {
+      const res = await fetch(`/api/polls/${id}/reminder`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.email_status) {
+          setEmailStatus(data.email_status);
+        }
+      }
+    } catch (err: any) {
+      setEmailStatus({
+        sent: 0,
+        total: 0,
+        has_api_key: false,
+        error: err.message || 'Failed to send reminders',
+      });
+    } finally {
+      setSendingReminder(false);
+    }
+  };
+
   const handleCloseVoting = async () => {
     try {
       const res = await fetch(`/api/polls/${id}/close`, { method: 'POST' });
@@ -148,9 +173,13 @@ export default function PollDashboard({ params }: { params: Promise<{ id: string
             </div>
             
             <div className="flex flex-wrap items-center gap-3">
-              <button className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm font-medium transition-colors">
-                <Mail className="w-4 h-4 text-slate-300" />
-                Send Reminder
+              <button 
+                onClick={handleSendReminder}
+                disabled={sendingReminder}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-300 rounded-lg text-sm font-medium transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Mail className="w-4 h-4 text-indigo-400" />
+                {sendingReminder ? 'Sending Email...' : 'Send Reminder Email'}
               </button>
               <button 
                 onClick={handleCloseVoting}
@@ -168,6 +197,25 @@ export default function PollDashboard({ params }: { params: Promise<{ id: string
               </Link>
             </div>
           </div>
+
+          {/* Resend Email Status Banner */}
+          {emailStatus && (
+            <div className="p-4 rounded-xl border bg-white/5 border-white/10 text-xs text-left">
+              {!emailStatus.has_api_key ? (
+                <div className="text-amber-400 font-medium">
+                  ⚠️ RESEND_API_KEY environment variable is missing on Vercel. Please add RESEND_API_KEY in Vercel settings to deliver emails to real inboxes.
+                </div>
+              ) : emailStatus.error ? (
+                <div className="text-amber-400 font-medium">
+                  ⚠️ Resend Delivery Notice: {emailStatus.error}
+                </div>
+              ) : (
+                <div className="text-emerald-400 font-medium">
+                  ✓ Resend Email Dispatch: {emailStatus.sent}/{emailStatus.total} reminder emails sent successfully via Resend!
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Stats Grid */}
