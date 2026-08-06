@@ -105,13 +105,23 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: polls, error } = await supabase
+    // Try relational query first
+    let { data: polls, error } = await supabase
       .from('polls')
-      .select('*, candidates(id), voters(id)')
+      .select('*, candidates(id), voters(id, has_voted)')
       .eq('creator_id', user.id)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    // Fallback simple query if relational join fails
+    if (error || !polls) {
+      const fallback = await supabase
+        .from('polls')
+        .select('*')
+        .eq('creator_id', user.id)
+        .order('created_at', { ascending: false });
+
+      polls = fallback.data || [];
+    }
 
     return NextResponse.json({ polls });
   } catch (error: any) {

@@ -105,15 +105,15 @@ export default function PollsPage() {
         const res = await fetch('/api/polls');
         if (res.ok) {
           const data = await res.json();
-          if (data.polls && data.polls.length > 0) {
+          if (Array.isArray(data.polls)) {
             const mappedPolls = data.polls.map((p: any) => ({
               id: p.id,
               title: p.title,
-              status: p.status,
-              totalVoters: p.credits_consumed || p.voters?.[0]?.count || 0,
-              votedCount: 0,
-              createdAt: new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              endTime: p.end_time ? new Date(p.end_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : undefined,
+              status: p.status || 'draft',
+              totalVoters: p.voters?.length || p.credits_consumed || 0,
+              votedCount: p.voters?.filter((v: any) => v.has_voted).length || 0,
+              createdAt: p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Today',
+              endTime: p.end_time ? new Date(p.end_time).toLocaleDateString() : undefined,
             }));
             setPolls(mappedPolls);
           }
