@@ -61,15 +61,16 @@ export default function NewPollWizard() {
       const formatted = manualVoters
         .filter((v) => v.email.trim() || v.name.trim())
         .map((v) => {
-          const isValid = Boolean(v.email.trim() && v.name.trim() && emailRegex.test(v.email.trim()));
+          const email = v.email.trim();
+          const name = v.name.trim() || (email ? email.split('@')[0] : 'Voter');
+          const isValid = Boolean(email && emailRegex.test(email));
           let issue = undefined;
-          if (!v.name.trim()) issue = 'Name required';
-          else if (!v.email.trim()) issue = 'Email required';
-          else if (!emailRegex.test(v.email.trim())) issue = 'Invalid Email';
+          if (!email) issue = 'Email required';
+          else if (!emailRegex.test(email)) issue = 'Invalid Email';
 
           return {
-            name: v.name.trim(),
-            email: v.email.trim(),
+            name,
+            email,
             phone: v.phone.trim(),
             valid: isValid,
             issue,
@@ -223,6 +224,10 @@ export default function NewPollWizard() {
       }
 
       const validVotersList = voters.filter((v) => v.valid);
+      if (!validVotersList || validVotersList.length === 0) {
+        throw new Error('Please add at least 1 valid voter with an email address in Step 3 before launching.');
+      }
+
       if (activePollId) {
         const launchRes = await fetch(`/api/polls/${activePollId}/launch`, {
           method: 'POST',
@@ -240,7 +245,7 @@ export default function NewPollWizard() {
           }
         } else {
           const launchErr = await launchRes.json();
-          console.warn('Launch API warning:', launchErr);
+          throw new Error(launchErr.error || 'Failed to launch election and save voters');
         }
       }
       setIsLaunched(true);
