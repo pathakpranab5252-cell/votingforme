@@ -139,12 +139,21 @@ export async function POST(
       url: `${baseUrl}/vote/${v.token}`,
     }));
 
+    const firstResult = emailResults[0]?.status === 'fulfilled' ? (emailResults[0].value as any) : null;
+    const emailStatus = {
+      sent: sentCount,
+      total: emailResults.length,
+      has_api_key: Boolean(process.env.RESEND_API_KEY),
+      error: firstResult?.error ? (firstResult.error.message || JSON.stringify(firstResult.error)) : null,
+    };
+
     return NextResponse.json({
       success: true,
       message: `Poll launched! Sending ${voters.length} invitation emails.`,
       poll_id: pollId,
       voters_count: insertedVoters?.length ?? 0,
       voter_links: voterLinks,
+      email_status: emailStatus,
     });
   } catch (error: any) {
     console.error('Launch error:', error);

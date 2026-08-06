@@ -79,6 +79,7 @@ export default function NewPollWizard() {
     }
   }, [manualVoters, voterInputMode]);
   const [generatedVoterLinks, setGeneratedVoterLinks] = useState<Array<{ name: string; email: string; url: string }>>([]);
+  const [emailDispatchStatus, setEmailDispatchStatus] = useState<any>(null);
   const [credits, setCredits] = useState(100);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLaunching, setIsLaunched] = useState(false);
@@ -233,6 +234,9 @@ export default function NewPollWizard() {
           const launchData = await launchRes.json();
           if (Array.isArray(launchData.voter_links)) {
             setGeneratedVoterLinks(launchData.voter_links);
+          }
+          if (launchData.email_status) {
+            setEmailDispatchStatus(launchData.email_status);
           }
         } else {
           const launchErr = await launchRes.json();
@@ -751,6 +755,25 @@ export default function NewPollWizard() {
                  <p className="text-slate-400 max-w-md mx-auto mb-6">
                    Your election is now live. We are currently sending out {voters.filter(v => v.valid).length} invitation emails to your voters.
                  </p>
+
+                 {/* Resend Email Status Notice */}
+                 {emailDispatchStatus && (
+                   <div className="max-w-xl mx-auto mb-6 p-4 rounded-xl text-left text-xs border bg-white/5 border-white/10">
+                     {!emailDispatchStatus.has_api_key ? (
+                       <div className="text-amber-400 font-medium">
+                         ⚠️ RESEND_API_KEY environment variable is not set on Vercel yet. Add RESEND_API_KEY in Vercel settings to deliver emails to real inboxes.
+                       </div>
+                     ) : emailDispatchStatus.error ? (
+                       <div className="text-amber-400 font-medium">
+                         ⚠️ Resend Sandbox Notice: {emailDispatchStatus.error}
+                       </div>
+                     ) : (
+                       <div className="text-emerald-400 font-medium">
+                         ✓ Resend Email Dispatch: {emailDispatchStatus.sent}/{emailDispatchStatus.total} invitation emails sent via Resend!
+                       </div>
+                     )}
+                   </div>
+                 )}
 
                  {/* Generated Voting Links for Testing */}
                  {generatedVoterLinks.length > 0 && (
