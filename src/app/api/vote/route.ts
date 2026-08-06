@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const primaryCandidateId = candidate_id || (typeof selectionsArray[0] === 'string' ? selectionsArray[0] : selectionsArray[0]?.candidate_id);
 
     // Record the vote
-    const { error: updateError } = await supabase
+    const { data: updatedVoter, error: updateError } = await supabase
       .from('voters')
       .update({
         has_voted: true,
@@ -46,7 +46,8 @@ export async function POST(request: Request) {
         voted_for: primaryCandidateId,
         voted_for_selections: selectionsArray,
       })
-      .eq('id', voter.id);
+      .eq('id', voter.id)
+      .select();
 
     if (updateError) throw updateError;
 
@@ -58,13 +59,12 @@ export async function POST(request: Request) {
       metadata: { voter_id: voter.id },
     });
 
-    // Send receipt email (non-blocking, anonymous — does not contain candidate selection)
+    // Send receipt email (non-blocking, anonymous)
     sendVoteReceipt(voter.email, poll.title).catch(console.error);
 
     return NextResponse.json({
       success: true,
       message: 'Your vote has been recorded successfully',
-      candidate_name: candidate.name,
     });
   } catch (error: any) {
     console.error('Vote error:', error);

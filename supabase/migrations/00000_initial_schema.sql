@@ -131,7 +131,7 @@ CREATE POLICY "Anyone can view ballot by token"
 ON public.voters FOR SELECT USING (true);
 
 CREATE POLICY "Voters can record their vote"
-ON public.voters FOR UPDATE USING (true);
+ON public.voters FOR UPDATE USING (true) WITH CHECK (true);
 
 CREATE POLICY "Voters can insert voters"
 ON public.voters FOR INSERT WITH CHECK (true);
