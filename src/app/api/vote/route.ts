@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/server';
 import { sendVoteReceipt } from '@/lib/email/resend';
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const body = await request.json();
     const { token, candidate_id, selections } = body;
 
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Token is required' }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data: voter, error: voterError } = await supabase
       .from('voters')
