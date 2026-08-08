@@ -84,6 +84,7 @@ export async function POST(
       sent: sentCount,
       total: emailResults.length,
       has_api_key: Boolean(process.env.RESEND_API_KEY),
+      resend_id: firstResult?.data?.id || null,
       error: firstResult?.error ? (firstResult.error.message || JSON.stringify(firstResult.error)) : null,
     };
 

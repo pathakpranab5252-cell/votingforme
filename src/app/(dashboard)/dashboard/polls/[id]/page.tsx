@@ -212,6 +212,9 @@ export default function PollDashboard({ params }: { params: Promise<{ id: string
               ) : (
                 <div className="text-emerald-400 font-medium">
                   ✓ Resend Email Dispatch: {emailStatus.sent}/{emailStatus.total} reminder emails sent successfully via Resend!
+                  {emailStatus.resend_id && (
+                    <span className="block mt-1 font-mono text-[11px] text-emerald-300">Resend Message ID: {emailStatus.resend_id}</span>
+                  )}
                 </div>
               )}
             </div>
